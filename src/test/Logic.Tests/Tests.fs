@@ -25,7 +25,7 @@ let overlapTests =
     test "A request overlaps with itself" {
       let request = {
         UserId = 1
-        RequestId = Guid.NewGuid()
+        HolidayId = Guid.NewGuid()
         Start = { Date = DateTime(2018, 10, 1); HalfDay = AM }
         End = { Date = DateTime(2018, 10, 1); HalfDay = PM }
       }
@@ -36,19 +36,37 @@ let overlapTests =
     test "Requests on 2 distinct days don't overlap" {
       let request1 = {
         UserId = 1
-        RequestId = Guid.NewGuid()
+        HolidayId = Guid.NewGuid()
         Start = { Date = DateTime(2018, 10, 1); HalfDay = AM }
         End = { Date = DateTime(2018, 10, 1); HalfDay = PM }
       }
 
       let request2 = {
         UserId = 1
-        RequestId = Guid.NewGuid()
+        HolidayId = Guid.NewGuid()
         Start = { Date = DateTime(2018, 10, 2); HalfDay = AM }
         End = { Date = DateTime(2018, 10, 2); HalfDay = PM }
       }
 
       Expect.isFalse (Logic.overlapsWith request1 request2) "The requests don't overlap"
+    }
+
+    test "Requests on 2 overlaping days overlap" {
+      let request1 = {
+        UserId = 1
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 10, 1); HalfDay = AM }
+        End = { Date = DateTime(2018, 10, 4); HalfDay = PM }
+      }
+
+      let request2 = {
+        UserId = 1
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 10, 2); HalfDay = AM }
+        End = { Date = DateTime(2018, 10, 2); HalfDay = PM }
+      }
+
+      Expect.isTrue (Logic.overlapsWith request1 request2) "The requests overlap"
     }
   ]
 
@@ -58,7 +76,7 @@ let creationTests =
     test "A request is created" {
       let request = {
         UserId = 1
-        RequestId = Guid.Empty
+        HolidayId = Guid.Empty
         Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
         End = { Date = DateTime(2018, 12, 28); HalfDay = PM } }
 
@@ -75,7 +93,7 @@ let validationTests =
     test "A request is validated" {
       let request = {
         UserId = 1
-        RequestId = Guid.Empty
+        HolidayId = Guid.Empty
         Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
         End = { Date = DateTime(2018, 12, 28); HalfDay = PM } }
 

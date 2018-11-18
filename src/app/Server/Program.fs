@@ -31,7 +31,7 @@ module HttpHandlers =
     let requestTimeOff (handleCommand: Command -> Result<RequestEvent list, string>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
-                let! timeOffRequest = ctx.BindJsonAsync<TimeOffRequest>()
+                let! timeOffRequest = ctx.BindJsonAsync<TimeOffHoliday>()
                 let command = RequestTimeOff timeOffRequest
                 let result = handleCommand command
                 match result with

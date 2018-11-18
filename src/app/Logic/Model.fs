@@ -1,24 +1,25 @@
 ﻿namespace TimeOff
 
 open System
-
+open EventStorage
+open HolidayTools
 // Then our commands
 type Command =
-    | RequestTimeOff of TimeOffRequest
+    | RequestTimeOff of TimeOffHoliday
     | ValidateRequest of UserId * Guid with
     member this.UserId =
         match this with
-        | RequestTimeOff request -> request.UserId
+        | RequestTimeOff holiday -> holiday.UserId
         | ValidateRequest (userId, _) -> userId
 
 // And our events
 type RequestEvent =
-    | RequestCreated of TimeOffRequest
-    | RequestValidated of TimeOffRequest with
+    | RequestCreated of TimeOffHoliday
+    | RequestValidated of TimeOffHoliday with
     member this.Request =
         match this with
-        | RequestCreated request -> request
-        | RequestValidated request -> request
+        | RequestCreated holiday -> holiday
+        | RequestValidated holiday -> holiday
 
 // We then define the state of the system,
 // and our 2 main functions `decide` and `evolve`
@@ -26,13 +27,13 @@ module Logic =
 
     type RequestState =
         | NotCreated
-        | PendingValidation of TimeOffRequest
-        | Validated of TimeOffRequest with
+        | PendingValidation of TimeOffHoliday
+        | Validated of TimeOffHoliday with
         member this.Request =
             match this with
             | NotCreated -> invalidOp "Not created"
-            | PendingValidation request
-            | Validated request -> request
+            | PendingValidation holiday
+            | Validated holiday -> holiday
         member this.IsActive =
             match this with
             | NotCreated -> false
@@ -43,33 +44,40 @@ module Logic =
 
     let evolveRequest state event =
         match event with
-        | RequestCreated request -> PendingValidation request
-        | RequestValidated request -> Validated request
+        | RequestCreated holiday -> PendingValidation holiday
+        | RequestValidated holiday -> Validated holiday
 
     let evolveUserRequests (userRequests: UserRequestsState) (event: RequestEvent) =
-        let requestState = defaultArg (Map.tryFind event.Request.RequestId userRequests) NotCreated
-        let newRequestState = evolveRequest requestState event
-        userRequests.Add (event.Request.RequestId, newRequestState)
+        let holidayState = defaultArg (Map.tryFind event.Request.HolidayId userRequests) NotCreated
+        let newRequestState = evolveRequest holidayState event
+        userRequests.Add (event.Request.HolidayId, newRequestState)
 
-    let overlapsWith request1 request2 =
-        false //TODO: write a function that checks if 2 requests overlap
+    let overlapsWith (holiday1:TimeOffHoliday) (holiday2:TimeOffHoliday) =
+        match (holiday1, holiday2) with
+        | (h1, h2) when h1 |> isTheSameThanTheOther h2 -> true
+        | _ -> false
+        
+        // Ou est la Motherfucking doc
+        // TODO: write a function that checks if 2 holidays overlap
 
-    let overlapsWithAnyRequest (otherRequests: TimeOffRequest seq) request =
-        false //TODO: write this function using overlapsWith
+    let overlapsWithAnyRequest (otherRequests: TimeOffHoliday seq) holiday =
+         Seq.exists (fun req -> overlapsWith req holiday) otherRequests
 
-    let createRequest activeUserRequests  request =
-        if request |> overlapsWithAnyRequest activeUserRequests then
-            Error "Overlapping request"
+        // false //TODO: write this function using overlapsWith
+
+    let createRequest activeUserRequests  holiday =
+        if holiday |> overlapsWithAnyRequest activeUserRequests then
+            Error "Overlapping holiday"
         // This DateTime.Today must go away!
-        elif request.Start.Date <= DateTime.Today then
-            Error "The request starts in the past"
+        elif holiday.Start.Date <= DateTime.Today then
+            Error "The holiday starts in the past"
         else
-            Ok [RequestCreated request]
+            Ok [RequestCreated holiday]
 
-    let validateRequest requestState =
-        match requestState with
-        | PendingValidation request ->
-            Ok [RequestValidated request]
+    let validateRequest holidayState =
+        match holidayState with
+        | PendingValidation holiday ->
+            Ok [RequestValidated holiday]
         | _ ->
             Error "Request cannot be validated"
 
