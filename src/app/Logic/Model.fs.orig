@@ -5,6 +5,7 @@ open EventStorage
 open HolidayTools
 // Then our commands (ce qu'on fait)
 type Command =
+<<<<<<< HEAD
     | AskHolidayTimeOff of TimeOffHoliday
     | ValidateHoliday of UserId * Guid 
     | AskCancelHoliday of UserId * Guid
@@ -25,6 +26,25 @@ type HolidayEvent =
             | HolidayCreated holiday -> holiday
             | HolidayValidated holiday -> holiday
             | HolidayCancelPending holiday -> holiday
+=======
+    | RequestTimeOff of TimeOffRequest
+    | ValidateRequest of UserId * Guid
+    with
+    member this.UserId =
+        match this with
+        | RequestTimeOff request -> request.UserId
+        | ValidateRequest (userId, _) -> userId
+
+// And our events
+type RequestEvent =
+    | RequestCreated of TimeOffRequest
+    | RequestValidated of TimeOffRequest
+    with
+    member this.Request =
+        match this with
+        | RequestCreated request -> request
+        | RequestValidated request -> request
+>>>>>>> master
 
 // We then define the state of the system,
 // and our 2 main functions `decide` and `evolve`
@@ -66,14 +86,26 @@ module Logic =
         | _ -> false
         
         // TODO: write a function that checks if 2 holidays overlap
+
     let overlapsWithAnyRequest (otherRequests: TimeOffHoliday seq) holiday =
          Seq.exists (fun req -> overlapsWith req holiday) otherRequests
 
-    let createRequest today activeUserRequests holiday =
+        // false //TODO: write this function using overlapsWith
+
+<<<<<<< HEAD
+    let createRequest activeUserRequests  holiday =
         if holiday |> overlapsWithAnyRequest activeUserRequests then
             Error "Overlapping holiday"
-        elif holiday.Start.Date <= today then
+        // This DateTime.Today must go away!
+        elif holiday.Start.Date <= DateTime.Today then
             Error "The holiday starts in the past"
+=======
+    let createRequest today activeUserRequests request =
+        if request |> overlapsWithAnyRequest activeUserRequests then
+            Error "Overlapping request"
+        elif request.Start.Date <= today then
+            Error "The request starts in the past"
+>>>>>>> master
         else
             Ok [HolidayCreated holiday]
 
@@ -82,12 +114,16 @@ module Logic =
         | PendingValidation holiday -> Ok [HolidayValidated holiday]
         | _ ->  Error "Holiday cannot be validated"
 
+<<<<<<< HEAD
     let askCancelHoliday holidayState =
         match holidayState with 
         | PendingCancelation holiday -> Ok [HolidayCancelPending holiday]
         | _ -> Error "Holiday cannot be canceled"
 
-    let decide  (today: DateTime) (userRequests: UserHolidaysState) (user: User) (command: Command) =
+    let decide (userRequests: UserHolidaysState) (user: User) (command: Command) =
+=======
+    let decide (today: DateTime) (userRequests: UserRequestsState) (user: User) (command: Command) =
+>>>>>>> master
         let relatedUserId = command.UserId
         match user with
         | Employee userId when userId <> relatedUserId ->

@@ -63,9 +63,10 @@ let webApp (eventStore: IStore<UserId, HolidayEvent>) =
 
         let eventStream = eventStore.GetStream(userId)
         let state = eventStream.ReadAll() |> Seq.fold Logic.evolveUserRequests Map.empty
+        let today = DateTime.Today
 
         // Decide how to handle the command
-        let result = Logic.decide state user command
+        let result = Logic.decide today state user command
 
         // Save events in case of success
         match result with

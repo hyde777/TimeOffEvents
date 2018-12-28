@@ -3,12 +3,20 @@ module TimeOff.Tests
 open Expecto
 open System
 
+<<<<<<< HEAD
 let Given (events: HolidayEvent list) = events
 let ConnectedAs (user: User) (events: HolidayEvent list) = events, user
-let AndDateIs (year, month, day) (events: HolidayEvent list, user: User) = events, user, DateTime(year, month, day)
-let When (command: Command) (events: HolidayEvent list, user: User, today: DateTime) = events, user, today, command
-let Then expected message (events: HolidayEvent list, user: User, today: DateTime, command: Command) =
+let When (command: Command) (events: HolidayEvent list, user: User) = events, user, command
+let Then expected message (events: HolidayEvent list, user: User, command: Command) =
     let evolveGlobalState (userStates: Map<UserId, Logic.UserHolidaysState>) (event: HolidayEvent) =
+=======
+let Given (events: RequestEvent list) = events
+let ConnectedAs (user: User) (events: RequestEvent list) = events, user
+let AndDateIs (year, month, day) (events: RequestEvent list, user: User) = events, user, DateTime(year, month, day)
+let When (command: Command) (events: RequestEvent list, user: User, today: DateTime) = events, user, today, command
+let Then expected message (events: RequestEvent list, user: User, today: DateTime, command: Command) =
+    let evolveGlobalState (userStates: Map<UserId, Logic.UserRequestsState>) (event: RequestEvent) =
+>>>>>>> master
         let userState = defaultArg (Map.tryFind event.Request.UserId userStates) Map.empty
         let newUserState = Logic.evolveUserRequests userState event
         userStates.Add (event.Request.UserId, newUserState)
@@ -77,28 +85,37 @@ let creationTests =
     test "A request is created" {
       let request = {
         UserId = 1
-        HolidayId =  Guid.NewGuid()
+<<<<<<< HEAD
+        HolidayId = Guid.Empty
+=======
+        RequestId = Guid.NewGuid()
+>>>>>>> master
         Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
         End = { Date = DateTime(2018, 12, 28); HalfDay = PM } }
 
       Given [ ]
       |> ConnectedAs (Employee 1)
-      |> AndDateIs (2018, 12, 3)
+<<<<<<< HEAD
       |> When (AskHolidayTimeOff request)
       |> Then (Ok [HolidayCreated request]) "The request should have been created"
+=======
+      |> AndDateIs (2018, 12, 3)
+      |> When (RequestTimeOff request)
+      |> Then (Ok [RequestCreated request]) "The request should have been created"
+>>>>>>> master
     }
 
     test "A request in the past cannot be created" {
       let request = {
         UserId = 1
-        HolidayId = Guid.NewGuid()
+        RequestId = Guid.NewGuid()
         Start = { Date = DateTime(2018, 11, 28); HalfDay = AM }
         End = { Date = DateTime(2018, 11, 28); HalfDay = PM } }
 
       Given [ ]
       |> ConnectedAs (Employee 1)
       |> AndDateIs (2018, 12, 3)
-      |> When (AskHolidayTimeOff request)
+      |> When (RequestTimeOff request)
       |> Then (Error "The request starts in the past") "The request should not have been created"
     }
   ]
@@ -115,8 +132,7 @@ let validationTests =
 
       Given [ HolidayCreated request ] // L'event qui rentre
       |> ConnectedAs Manager
-      |> AndDateIs (2018, 12, 3)
-      |> When (ValidateHoliday (1, request.HolidayId)) // quand cette commande est rentrï¿½
+      |> When (ValidateHoliday (1, request.HolidayId)) // quand cette commande est rentré
       |> Then (Ok [HolidayValidated request]) "The request should have been validated"
     }
   ]
@@ -127,14 +143,23 @@ let cancelationTests =
     test "A request created is canceled" {
       let request = {
         UserId = 1
+<<<<<<< HEAD
         HolidayId = Guid.NewGuid()
+=======
+        RequestId = Guid.NewGuid()
+>>>>>>> master
         Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
-        End = { Date = DateTime(2018, 12, 30); HalfDay = PM } }
-        
+        End = { Date = DateTime(2018, 12, 28); HalfDay = PM } }
+
       Given [ HolidayCreated request ]
-      |> ConnectedAs (Employee 1)
-      |> AndDateIs (2018, 12, 29)
-      |> When (AskCancelHoliday (request.UserId, request.HolidayId))
+      |> ConnectedAs Manager
+<<<<<<< HEAD
+      |> When (CanceledHoliday (request.UserId, request.HolidayId))
       |> Then (Ok [HolidayCancelPending request]) "The request should have been canceled"
+=======
+      |> AndDateIs (2018, 12, 3)
+      |> When (ValidateRequest (1, request.RequestId))
+      |> Then (Ok [RequestValidated request]) "The request should have been validated"
+>>>>>>> master
     }
   ]
