@@ -3,11 +3,11 @@ module TimeOff.Tests
 open Expecto
 open System
 
-let Given (events: RequestEvent list) = events
-let ConnectedAs (user: User) (events: RequestEvent list) = events, user
-let When (command: Command) (events: RequestEvent list, user: User) = events, user, command
-let Then expected message (events: RequestEvent list, user: User, command: Command) =
-    let evolveGlobalState (userStates: Map<UserId, Logic.UserRequestsState>) (event: RequestEvent) =
+let Given (events: HolidayEvent list) = events
+let ConnectedAs (user: User) (events: HolidayEvent list) = events, user
+let When (command: Command) (events: HolidayEvent list, user: User) = events, user, command
+let Then expected message (events: HolidayEvent list, user: User, command: Command) =
+    let evolveGlobalState (userStates: Map<UserId, Logic.UserHolidaysState>) (event: HolidayEvent) =
         let userState = defaultArg (Map.tryFind event.Request.UserId userStates) Map.empty
         let newUserState = Logic.evolveUserRequests userState event
         userStates.Add (event.Request.UserId, newUserState)
@@ -82,24 +82,41 @@ let creationTests =
 
       Given [ ]
       |> ConnectedAs (Employee 1)
-      |> When (RequestTimeOff request)
-      |> Then (Ok [RequestCreated request]) "The request should have been created"
+      |> When (AskHolidayTimeOff request)
+      |> Then (Ok [HolidayCreated request]) "The request should have been created"
     }
   ]
 
 [<Tests>]
 let validationTests =
   testList "Validation tests" [
-    test "A request is validated" {
+    test "A request created is validated" {
       let request = {
         UserId = 1
-        HolidayId = Guid.Empty
+        HolidayId = Guid.NewGuid()
         Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
         End = { Date = DateTime(2018, 12, 28); HalfDay = PM } }
 
-      Given [ RequestCreated request ]
+      Given [ HolidayCreated request ] // L'event qui rentre
       |> ConnectedAs Manager
-      |> When (ValidateRequest (1, Guid.Empty))
-      |> Then (Ok [RequestValidated request]) "The request should have been validated"
+      |> When (ValidateHoliday (1, request.HolidayId)) // quand cette commande est rentré
+      |> Then (Ok [HolidayValidated request]) "The request should have been validated"
+    }
+  ]
+
+[<Tests>]
+let cancelationTests =
+  testList "Cancelation tests" [
+    test "A request created is canceled" {
+      let request = {
+        UserId = 1
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
+        End = { Date = DateTime(2018, 12, 28); HalfDay = PM } }
+
+      Given [ HolidayCreated request ]
+      |> ConnectedAs Manager
+      |> When (CanceledHoliday (request.UserId, request.HolidayId))
+      |> Then (Ok [HolidayCancelPending request]) "The request should have been canceled"
     }
   ]

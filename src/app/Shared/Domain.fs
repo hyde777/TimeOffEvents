@@ -27,6 +27,7 @@ type TimeOffHoliday = {
 
 module HolidayTools =
 
+    // On ne sait pas lequel est le plus grand et le plus petit
     let isBetweenBoundaryOf = fun (holidayShorter:TimeOffHoliday) holidayLonger ->
         match holidayShorter, holidayLonger with
         | hs, hl when hs.Start > hl.Start && hs.End < hl.End -> true
@@ -37,9 +38,8 @@ module HolidayTools =
         | hol1, hol2 when hol1.UserId = hol2.UserId -> true
         | _ -> false
 
-    let isTheSameThanTheOther = fun holiday1 holiday2 ->
+    let TheyCanBothTakeHolydayWhen = fun holiday1 holiday2 ->
         match holiday1, holiday2 with
-        | hol1, hol2 when hol1.Start = hol2.Start 
-                          && hol1.End = hol2.End 
-                          && takenByTheSameUser hol1 hol2 -> true
-        | _ -> false
+        | hol1, hol2 when not (takenByTheSameUser hol1 hol2) -> true
+        | hol1, hol2 when isBetweenBoundaryOf hol1 hol2 -> false
+        | _ -> true

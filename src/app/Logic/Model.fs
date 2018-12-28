@@ -3,61 +3,68 @@
 open System
 open EventStorage
 open HolidayTools
-// Then our commands
+// Then our commands (ce qu'on fait)
 type Command =
-    | RequestTimeOff of TimeOffHoliday
-    | ValidateRequest of UserId * Guid with
-    member this.UserId =
-        match this with
-        | RequestTimeOff holiday -> holiday.UserId
-        | ValidateRequest (userId, _) -> userId
+    | AskHolidayTimeOff of TimeOffHoliday
+    | ValidateHoliday of UserId * Guid 
+    | AskCancelHoliday of UserId * Guid
+    with member this.UserId =
+            match this with
+            | AskHolidayTimeOff holiday -> holiday.UserId
+            | ValidateHoliday (userId, _) -> userId
+            | AskCancelHoliday (userId, _) -> userId
 
-// And our events
-type RequestEvent =
-    | RequestCreated of TimeOffHoliday
-    | RequestValidated of TimeOffHoliday with
-    member this.Request =
-        match this with
-        | RequestCreated holiday -> holiday
-        | RequestValidated holiday -> holiday
+
+// And our events (ce qu'on écoute)
+type HolidayEvent =
+    | HolidayCreated of TimeOffHoliday
+    | HolidayValidated of TimeOffHoliday 
+    | HolidayCancelPending of TimeOffHoliday
+    with member this.Request =
+            match this with
+            | HolidayCreated holiday -> holiday
+            | HolidayValidated holiday -> holiday
+            | HolidayCancelPending holiday -> holiday
 
 // We then define the state of the system,
 // and our 2 main functions `decide` and `evolve`
 module Logic =
-
-    type RequestState =
+    type HolidayState =
         | NotCreated
         | PendingValidation of TimeOffHoliday
-        | Validated of TimeOffHoliday with
+        | Validated of TimeOffHoliday
+        | PendingCancelation of TimeOffHoliday with
         member this.Request =
             match this with
             | NotCreated -> invalidOp "Not created"
             | PendingValidation holiday
-            | Validated holiday -> holiday
+            | Validated holiday 
+            | PendingCancelation holiday -> holiday
         member this.IsActive =
             match this with
             | NotCreated -> false
             | PendingValidation _
-            | Validated _ -> true
+            | Validated _ 
+            | PendingCancelation _ -> true
 
-    type UserRequestsState = Map<Guid, RequestState>
+    type UserHolidaysState = Map<Guid, HolidayState>
 
     let evolveRequest state event =
         match event with
-        | RequestCreated holiday -> PendingValidation holiday
-        | RequestValidated holiday -> Validated holiday
+        | HolidayCreated holiday -> PendingValidation holiday
+        | HolidayValidated holiday -> Validated holiday
+        | HolidayCancelPending holiday -> PendingCancelation holiday
 
-    let evolveUserRequests (userRequests: UserRequestsState) (event: RequestEvent) =
+    let evolveUserRequests (userRequests: UserHolidaysState) (event: HolidayEvent) =
         let holidayState = defaultArg (Map.tryFind event.Request.HolidayId userRequests) NotCreated
-        let newRequestState = evolveRequest holidayState event
-        userRequests.Add (event.Request.HolidayId, newRequestState)
+        let newHolidayState = evolveRequest holidayState event
+        userRequests.Add (event.Request.HolidayId, newHolidayState)
 
     let overlapsWith (holiday1:TimeOffHoliday) (holiday2:TimeOffHoliday) =
         match (holiday1, holiday2) with
-        | (h1, h2) when h1 |> isTheSameThanTheOther h2 -> true
+        | (h1, h2) when h1 |> TheyCanBothTakeHolydayWhen h2 -> true
         | _ -> false
         
-        // Ou est la Motherfucking doc
         // TODO: write a function that checks if 2 holidays overlap
 
     let overlapsWithAnyRequest (otherRequests: TimeOffHoliday seq) holiday =
@@ -72,23 +79,32 @@ module Logic =
         elif holiday.Start.Date <= DateTime.Today then
             Error "The holiday starts in the past"
         else
-            Ok [RequestCreated holiday]
+            Ok [HolidayCreated holiday]
 
-    let validateRequest holidayState =
+    let validateHoliday holidayState =
         match holidayState with
-        | PendingValidation holiday ->
-            Ok [RequestValidated holiday]
-        | _ ->
-            Error "Request cannot be validated"
+        | PendingValidation holiday -> Ok [HolidayValidated holiday]
+        | _ ->  Error "Holiday cannot be validated"
 
-    let decide (userRequests: UserRequestsState) (user: User) (command: Command) =
+    let askCancelHoliday holidayState =
+        match holidayState with 
+        | PendingCancelation holiday -> Ok [HolidayCancelPending holiday]
+        | _ -> Error "Holiday cannot be canceled"
+
+    let decide (userRequests: UserHolidaysState) (user: User) (command: Command) =
         let relatedUserId = command.UserId
         match user with
         | Employee userId when userId <> relatedUserId ->
             Error "Unauthorized"
+        | Employee userId ->
+            match command with
+            | AskCancelHoliday (_, holidayId) -> 
+                let holidayState = defaultArg (userRequests.TryFind holidayId) NotCreated
+                askCancelHoliday holidayState
+            | _ -> Error "You cannot do this"
         | _ ->
             match command with
-            | RequestTimeOff request ->
+            | AskHolidayTimeOff request ->
                 let activeUserRequests =
                     userRequests
                     |> Map.toSeq
@@ -98,9 +114,9 @@ module Logic =
 
                 createRequest activeUserRequests request
 
-            | ValidateRequest (_, requestId) ->
+            | ValidateHoliday (_, holidayId) ->
                 if user <> Manager then
                     Error "Unauthorized"
                 else
-                    let requestState = defaultArg (userRequests.TryFind requestId) NotCreated
-                    validateRequest requestState
+                    let requestState = defaultArg (userRequests.TryFind holidayId) NotCreated
+                    validateHoliday requestState

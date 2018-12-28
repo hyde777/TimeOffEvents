@@ -28,11 +28,11 @@ module HttpHandlers =
         RequestId: Guid
     }
 
-    let requestTimeOff (handleCommand: Command -> Result<RequestEvent list, string>) =
+    let requestTimeOff (handleCommand: Command -> Result<HolidayEvent list, string>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
                 let! timeOffRequest = ctx.BindJsonAsync<TimeOffHoliday>()
-                let command = RequestTimeOff timeOffRequest
+                let command = AskHolidayTimeOff timeOffRequest
                 let result = handleCommand command
                 match result with
                 | Ok _ -> return! json timeOffRequest next ctx
@@ -40,14 +40,14 @@ module HttpHandlers =
                     return! (BAD_REQUEST message) next ctx
             }
 
-    let validateRequest (handleCommand: Command -> Result<RequestEvent list, string>) =
+    let validateRequest (handleCommand: Command -> Result<HolidayEvent list, string>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
                 let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
-                let command = ValidateRequest (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let command = ValidateHoliday (userAndRequestId.UserId, userAndRequestId.RequestId)
                 let result = handleCommand command
                 match result with
-                | Ok [RequestValidated timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok [HolidayValidated timeOffRequest] -> return! json timeOffRequest next ctx
                 | Ok _ -> return! Successful.NO_CONTENT next ctx
                 | Error message ->
                     return! (BAD_REQUEST message) next ctx
@@ -57,7 +57,7 @@ module HttpHandlers =
 // Web app
 // ---------------------------------
 
-let webApp (eventStore: IStore<UserId, RequestEvent>) =
+let webApp (eventStore: IStore<UserId, HolidayEvent>) =
     let handleCommand (user: User) (command: Command) =
         let userId = command.UserId
 
@@ -107,7 +107,7 @@ let configureCors (builder: CorsPolicyBuilder) =
            .AllowAnyHeader()
            |> ignore
 
-let configureApp (eventStore: IStore<UserId, RequestEvent>) (app: IApplicationBuilder) =
+let configureApp (eventStore: IStore<UserId, HolidayEvent>) (app: IApplicationBuilder) =
     let webApp = webApp eventStore
     let env = app.ApplicationServices.GetService<IHostingEnvironment>()
     (match env.IsDevelopment() with
@@ -131,7 +131,7 @@ let main _ =
 
     //let eventStore = InMemoryStore.Create<UserId, RequestEvent>()
     let storagePath = System.IO.Path.Combine(contentRoot, "../../../.storage", "userRequests")
-    let eventStore = FileSystemStore.Create<UserId, RequestEvent>(storagePath, sprintf "%d")
+    let eventStore = FileSystemStore.Create<UserId, HolidayEvent>(storagePath, sprintf "%d")
 
     let webRoot = Path.Combine(contentRoot, "WebRoot")
     WebHostBuilder()
