@@ -99,7 +99,7 @@ let creationTests =
       |> ConnectedAs (Employee 1)
       |> AndDateIs (2018, 12, 3)
       |> When (AskHolidayTimeOff request)
-      |> Then (Error "The request starts in the past") "The request should not have been created"
+      |> Then (Error "The holiday starts in the past") "The request should not have been created"
     }
   ]
 
@@ -122,19 +122,37 @@ let validationTests =
   ]
 
 [<Tests>]
-let cancelationTests =
-  testList "Cancelation tests" [
-    test "A request created is canceled" {
+let askCancelationTests =
+  testList "Ask Cancelation tests" [
+    test "A User ask a cancelation of his holiday" {
       let request = {
         UserId = 1
         HolidayId = Guid.NewGuid()
         Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
         End = { Date = DateTime(2018, 12, 30); HalfDay = PM } }
         
-      Given [ HolidayCreated request ]
+      Given [ HolidayValidated request ]
       |> ConnectedAs (Employee 1)
       |> AndDateIs (2018, 12, 29)
       |> When (AskCancelHoliday (request.UserId, request.HolidayId))
       |> Then (Ok [HolidayCancelPending request]) "The request should have been canceled"
+    }
+  ]
+
+[<Tests>]
+let denyCancelationTests =
+  testList "Deny Cancelation tests" [
+    test "A Manager deny a cancelation of an Employee holiday" {
+      let request = {
+        UserId = 1
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
+        End = { Date = DateTime(2018, 12, 30); HalfDay = PM } }
+        
+      Given [ HolidayCancelPending request ]
+      |> ConnectedAs (Manager)
+      |> AndDateIs (2018, 12, 29)
+      |> When (DenyCancelHoliday (request.UserId, request.HolidayId))
+      |> Then (Ok [HolidayDenyCancel request]) "The ask of holiday cancelation should have been canceled/denied "
     }
   ]
