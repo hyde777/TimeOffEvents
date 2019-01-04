@@ -111,10 +111,10 @@ module Logic =
         | PendingValidation holiday -> Ok [HolidayRefused holiday]
         | _ ->  Error "Holiday cannot be refused"
 
-    let askCancelHoliday holidayState =
+    let askCancelHoliday holidayState today =
         match holidayState with 
-        | PendingValidation holiday -> Ok [HolidayCancelPending holiday]
-        | Validated holiday -> Ok [HolidayCancelPending holiday]
+        | PendingValidation holiday
+        | Validated holiday when holiday.Start.Date > today -> Ok [HolidayCancelPending holiday]
         | _ -> Error "Holiday cannot be ask to be canceled"
     
     let denyCancelHoliday holidayState =
@@ -122,16 +122,17 @@ module Logic =
         | PendingCancelation holiday -> Ok [HolidayDenyCancel holiday]
         | _ ->  Error "Holiday cannot be denied of his cancelation"
     
-    let cancelHolidayByUser holidayState =
+    let cancelHolidayByUser holidayState today =
         match holidayState with
-        | PendingValidation holiday 
-        | Validated holiday -> Ok [HolidayCancel holiday]
+        | PendingValidation holiday
+        | Validated holiday when holiday.Start.Date > today -> Ok [HolidayCancel holiday]
         | _ ->  Error "Holiday cannot be canceled"
 
     let cancelHolidayByManager holidayState =
         match holidayState with
         | PendingValidation holiday
         | Validated holiday 
+        | DeniedCancelation holiday
         | PendingCancelation holiday -> Ok [HolidayCancel holiday]
         | _ ->  Error "Holiday cannot be canceled"
 
@@ -168,7 +169,7 @@ module Logic =
 
             | AskCancelHoliday (_, holidayId) -> 
                 let holidayState = defaultArg (userRequests.TryFind holidayId) NotCreated
-                askCancelHoliday holidayState
+                askCancelHoliday holidayState today
 
             | DenyCancelHoliday (_, holidayId) ->
                 if user <> Manager then
@@ -180,7 +181,7 @@ module Logic =
             | CancelHoliday (_, holidayId) ->
                 if user <> Manager then
                     let requestState = defaultArg (userRequests.TryFind holidayId) NotCreated
-                    cancelHolidayByUser requestState
+                    cancelHolidayByUser requestState today
                 else
                     let requestState = defaultArg (userRequests.TryFind holidayId) NotCreated
                     cancelHolidayByManager requestState

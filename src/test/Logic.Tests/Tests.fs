@@ -248,7 +248,7 @@ let EmployeeCancelationTests =
         
       Given [ HolidayValidated holiday ]
       |> ConnectedAs (Employee holiday.UserId)
-      |> AndDateIs (2018, 12, 29)
+      |> AndDateIs (2018, 12, 27)
       |> When (CancelHoliday (holiday.UserId, holiday.HolidayId))
       |> Then (Ok [HolidayCancel holiday]) "The ask of holiday cancelation is confirmed"
     }
@@ -262,7 +262,7 @@ let EmployeeCancelationTests =
         
       Given [ HolidayCreated holiday ]
       |> ConnectedAs (Employee holiday.UserId)
-      |> AndDateIs (2018, 12, 29)
+      |> AndDateIs (2018, 12, 27)
       |> When (CancelHoliday (holiday.UserId, holiday.HolidayId))
       |> Then (Ok [HolidayCancel holiday]) "The ask of holiday cancelation is confirmed"
     }
