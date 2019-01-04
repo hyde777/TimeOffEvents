@@ -20,8 +20,6 @@ type Command =
             | CancelHoliday (userId, _) -> userId
             | RefuseHoliday (userId, _) -> userId
 
-
-
 // And our events (ce qu'on écoute)
 type HolidayEvent =
     | HolidayCreated of TimeOffHoliday

@@ -52,7 +52,59 @@ module HttpHandlers =
                 | Error message ->
                     return! (BAD_REQUEST message) next ctx
             }
+    
+    let refuseRequest (handleCommand: Command -> Result<HolidayEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
+                let command = RefuseHoliday (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [HolidayRefused timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
 
+    let askCancelationRequest (handleCommand: Command -> Result<HolidayEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
+                let command = AskCancelHoliday (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [HolidayCancelPending timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+
+    let cancelRequest (handleCommand: Command -> Result<HolidayEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
+                let command = CancelHoliday (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [HolidayCancel timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+    
+    let denyCancelRequest (handleCommand: Command -> Result<HolidayEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
+                let command = DenyCancelHoliday (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [HolidayDenyCancel timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+    
 // ---------------------------------
 // Web app
 // ---------------------------------
@@ -85,6 +137,10 @@ let webApp (eventStore: IStore<UserId, HolidayEvent>) =
                         choose [
                             POST >=> route "/request" >=> HttpHandlers.requestTimeOff (handleCommand user)
                             POST >=> route "/validate-request" >=> HttpHandlers.validateRequest (handleCommand user)
+                            POST >=> route "/refuse-request" >=> HttpHandlers.refuseRequest (handleCommand user)
+                            POST >=> route "/ask-cancel-request" >=> HttpHandlers.askCancelationRequest (handleCommand user)
+                            POST >=> route "/cancel-request" >=> HttpHandlers.cancelRequest (handleCommand user)
+                            POST >=> route "/deny-cancel-request" >=> HttpHandlers.denyCancelRequest (handleCommand user)
                         ]
                     ))
             ])
@@ -126,6 +182,7 @@ let configureLogging (builder: ILoggingBuilder) =
     let filter (l: LogLevel) = l.Equals LogLevel.Error
     builder.AddFilter(filter).AddConsole().AddDebug() |> ignore
 
+// TODO : check this entrypoint for the store
 [<EntryPoint>]
 let main _ =
     let contentRoot = Directory.GetCurrentDirectory()
