@@ -151,7 +151,7 @@ let askCancelationTests =
         
       Given [ HolidayValidated request ]
       |> ConnectedAs (Employee 1)
-      |> AndDateIs (2018, 12, 29)
+      |> AndDateIs (2018, 12, 27)
       |> When (AskCancelHoliday (request.UserId, request.HolidayId))
       |> Then (Ok [HolidayCancelPending request]) "The request should have been canceled"
     }
@@ -165,7 +165,7 @@ let askCancelationTests =
         
       Given [ HolidayCreated request ]
       |> ConnectedAs (Employee 1)
-      |> AndDateIs (2018, 12, 29)
+      |> AndDateIs (2018, 12, 27)
       |> When (AskCancelHoliday (request.UserId, request.HolidayId))
       |> Then (Ok [HolidayCancelPending request]) "The request should have been canceled"
     }
