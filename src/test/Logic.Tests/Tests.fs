@@ -122,9 +122,27 @@ let validationTests =
   ]
 
 [<Tests>]
+let refusedTests =
+  testList "Refused tests" [
+    test "A holiday created is refused" {
+      let holiday = {
+        UserId = 1
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
+        End = { Date = DateTime(2018, 12, 28); HalfDay = PM } }
+
+      Given [ HolidayCreated holiday ]
+      |> ConnectedAs Manager
+      |> AndDateIs (2018, 12, 3)
+      |> When (RefuseHoliday (1, holiday.HolidayId))
+      |> Then (Ok [HolidayRefused holiday]) "The request should have been validated"
+    }
+  ]
+
+[<Tests>]
 let askCancelationTests =
   testList "Ask Cancelation tests" [
-    test "A User ask a cancelation of his holiday" {
+    test "A User ask a cancelation of his validated holiday" {
       let request = {
         UserId = 1
         HolidayId = Guid.NewGuid()
@@ -137,9 +155,23 @@ let askCancelationTests =
       |> When (AskCancelHoliday (request.UserId, request.HolidayId))
       |> Then (Ok [HolidayCancelPending request]) "The request should have been canceled"
     }
+
+    test "A User ask a cancelation of his ask of holiday" {
+      let request = {
+        UserId = 1
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
+        End = { Date = DateTime(2018, 12, 30); HalfDay = PM } }
+        
+      Given [ HolidayCreated request ]
+      |> ConnectedAs (Employee 1)
+      |> AndDateIs (2018, 12, 29)
+      |> When (AskCancelHoliday (request.UserId, request.HolidayId))
+      |> Then (Ok [HolidayCancelPending request]) "The request should have been canceled"
+    }
   ]
 
-// TODO: Ask teacher about one stuff of the cancelation
+// TODO: Ask teacher about the after of the deny
 [<Tests>]
 let denyCancelationTests =
   testList "Deny Cancelation tests" [
@@ -159,8 +191,8 @@ let denyCancelationTests =
   ]
 
 [<Tests>]
-let CancelationTests =
-  testList "Cancelation tests" [
+let ManagerCancelationTests =
+  testList "Manager Cancelation tests" [
     test "A Manager confirm an ask of cancelation from an Employee" {
       let holiday = {
         UserId = 1
@@ -198,6 +230,38 @@ let CancelationTests =
         
       Given [ HolidayCreated holiday ]
       |> ConnectedAs (Manager)
+      |> AndDateIs (2018, 12, 29)
+      |> When (CancelHoliday (holiday.UserId, holiday.HolidayId))
+      |> Then (Ok [HolidayCancel holiday]) "The ask of holiday cancelation is confirmed"
+    }
+  ]
+
+[<Tests>]
+let EmployeeCancelationTests =
+  testList "Employee Cancelation tests" [
+    test "An Employee cancel his validated Holiday" {
+      let holiday = {
+        UserId = 1
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
+        End = { Date = DateTime(2018, 12, 30); HalfDay = PM } }
+        
+      Given [ HolidayValidated holiday ]
+      |> ConnectedAs (Employee holiday.UserId)
+      |> AndDateIs (2018, 12, 29)
+      |> When (CancelHoliday (holiday.UserId, holiday.HolidayId))
+      |> Then (Ok [HolidayCancel holiday]) "The ask of holiday cancelation is confirmed"
+    }
+
+    test "An Employee cancel an Holiday waiting to be validated" {
+      let holiday = {
+        UserId = 1
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
+        End = { Date = DateTime(2018, 12, 30); HalfDay = PM } }
+        
+      Given [ HolidayCreated holiday ]
+      |> ConnectedAs (Employee holiday.UserId)
       |> AndDateIs (2018, 12, 29)
       |> When (CancelHoliday (holiday.UserId, holiday.HolidayId))
       |> Then (Ok [HolidayCancel holiday]) "The ask of holiday cancelation is confirmed"
