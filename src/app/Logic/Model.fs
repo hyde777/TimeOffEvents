@@ -9,12 +9,14 @@ type Command =
     | ValidateHoliday of UserId * Guid 
     | AskCancelHoliday of UserId * Guid
     | DenyCancelHoliday of UserId * Guid
+    | CancelHoliday of UserId * Guid
     with member this.UserId =
             match this with
             | AskHolidayTimeOff holiday -> holiday.UserId
             | ValidateHoliday (userId, _) -> userId
             | AskCancelHoliday (userId, _) -> userId
             | DenyCancelHoliday (userId, _) -> userId
+            | CancelHoliday (userId, _) -> userId
 
 
 // And our events (ce qu'on écoute)
@@ -23,12 +25,14 @@ type HolidayEvent =
     | HolidayValidated of TimeOffHoliday 
     | HolidayCancelPending of TimeOffHoliday
     | HolidayDenyCancel of TimeOffHoliday
+    | HolidayCancel of TimeOffHoliday
     with member this.Request =
             match this with
             | HolidayCreated holiday -> holiday
             | HolidayValidated holiday -> holiday
             | HolidayCancelPending holiday -> holiday
             | HolidayDenyCancel holiday -> holiday
+            | HolidayCancel holiday -> holiday
 
 // We then define the state of the system,
 // and our 2 main functions `decide` and `evolve`
@@ -38,17 +42,20 @@ module Logic =
         | PendingValidation of TimeOffHoliday
         | Validated of TimeOffHoliday
         | PendingCancelation of TimeOffHoliday
-        | DeniedCancelation of TimeOffHoliday with
+        | DeniedCancelation of TimeOffHoliday
+        | Canceled of TimeOffHoliday with
         member this.Request =
             match this with
             | NotCreated -> invalidOp "Not created"
             | PendingValidation holiday
             | Validated holiday 
             | PendingCancelation holiday
-            | DeniedCancelation holiday -> holiday
+            | DeniedCancelation holiday
+            | Canceled holiday -> holiday
         member this.IsActive =
             match this with
-            | NotCreated -> false
+            | NotCreated
+            | Canceled _ -> false
             | PendingValidation _
             | Validated _ 
             | PendingCancelation _ 
@@ -62,6 +69,7 @@ module Logic =
         | HolidayValidated holiday -> Validated holiday
         | HolidayCancelPending holiday -> PendingCancelation holiday
         | HolidayDenyCancel holiday -> DeniedCancelation holiday
+        | HolidayCancel holiday -> Canceled holiday
 
     let evolveUserRequests (userRequests: UserHolidaysState) (event: HolidayEvent) =
         let holidayState = defaultArg (Map.tryFind event.Request.HolidayId userRequests) NotCreated
@@ -93,12 +101,19 @@ module Logic =
     let askCancelHoliday holidayState =
         match holidayState with 
         | Validated holiday -> Ok [HolidayCancelPending holiday]
-        | _ -> Error "Holiday cannot be canceled"
+        | _ -> Error "Holiday cannot be ask to be canceled"
     
     let denyCancelHoliday holidayState =
         match holidayState with
         | PendingCancelation holiday -> Ok [HolidayDenyCancel holiday]
         | _ ->  Error "Holiday cannot be denied of his cancelation"
+    
+    let cancelHoliday holidayState =
+        match holidayState with
+        | PendingValidation holiday
+        | Validated holiday 
+        | PendingCancelation holiday -> Ok [HolidayCancel holiday]
+        | _ ->  Error "Holiday cannot be canceled"
 
     let decide  (today: DateTime) (userRequests: UserHolidaysState) (user: User) (command: Command) =
         let relatedUserId = command.UserId
@@ -116,7 +131,14 @@ module Logic =
                     |> Seq.map (fun state -> state.Request)
 
                 createRequest today activeUserRequests request
-            
+
+            | ValidateHoliday (_, holidayId) ->
+                if user <> Manager then
+                    Error "Unauthorized"
+                else
+                    let requestState = defaultArg (userRequests.TryFind holidayId) NotCreated
+                    validateHoliday requestState
+
             | AskCancelHoliday (_, holidayId) -> 
                 let holidayState = defaultArg (userRequests.TryFind holidayId) NotCreated
                 askCancelHoliday holidayState
@@ -128,9 +150,9 @@ module Logic =
                     let requestState = defaultArg (userRequests.TryFind holidayId) NotCreated
                     denyCancelHoliday requestState
 
-            | ValidateHoliday (_, holidayId) ->
+            | CancelHoliday (_, holidayId) ->
                 if user <> Manager then
                     Error "Unauthorized"
                 else
                     let requestState = defaultArg (userRequests.TryFind holidayId) NotCreated
-                    validateHoliday requestState
+                    cancelHoliday requestState
