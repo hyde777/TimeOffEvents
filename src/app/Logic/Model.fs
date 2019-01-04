@@ -85,8 +85,8 @@ module Logic =
         userRequests.Add (event.Request.HolidayId, newHolidayState)
 
     let overlapsWith (holiday1:TimeOffHoliday) (holiday2:TimeOffHoliday) =
-        match (holiday1, holiday2) with
-        | (h1, h2) when h1 |> TheyCanBothTakeHolydayWhen h2 -> true
+        match holiday1, holiday2 with
+        | hol1, hol2 when isBetweenBoundaryOf hol1 hol2 -> true
         | _ -> false
         
         // TODO: write a function that checks if 2 holidays overlap

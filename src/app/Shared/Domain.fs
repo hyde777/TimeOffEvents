@@ -16,7 +16,7 @@ type Boundary = {
     Date: DateTime
     HalfDay: HalfDay
 }
-
+    
 [<CLIMutable>]
 type TimeOffHoliday = {
     UserId: UserId
@@ -26,20 +26,30 @@ type TimeOffHoliday = {
 }
 
 module HolidayTools =
-
-    // On ne sait pas lequel est le plus grand et le plus petit
-    let isBetweenBoundaryOf = fun (holidayShorter:TimeOffHoliday) holidayLonger ->
-        match holidayShorter, holidayLonger with
-        | hs, hl when hs.Start > hl.Start && hs.End < hl.End -> true
+    
+    let supBound bound1 bound2 =
+        match bound1, bound2 with
+        | b1, b2 when b1.Date > b2.Date -> true
+        | b1, b2 when b1.Date < b2.Date -> false
+        | b1, b2 when b1.HalfDay = PM && b2.HalfDay = AM -> true
         | _ -> false
 
+    let infBound bound1 bound2 =
+        match bound1, bound2 with
+        | b1, b2 when b1.Date > b2.Date -> false
+        | b1, b2 when b1.Date < b2.Date -> true
+        | b1, b2 when b1.HalfDay = PM && b2.HalfDay = AM -> false
+        | _ -> true
+        
+    let isBetweenBoundaryOf = fun (holiday1:TimeOffHoliday) holiday2 ->
+        match holiday1, holiday2 with
+        | hol1, hol2 when supBound hol1.Start hol2.Start && infBound hol1.Start hol2.End -> true
+        | hol1, hol2 when supBound hol2.Start hol1.Start && infBound hol2.Start hol1.End -> true
+        | hol1, hol2 when supBound hol1.End hol2.Start && infBound hol1.End hol2.End -> true
+        | hol1, hol2 when supBound hol2.End hol1.Start && infBound hol2.End hol1.End -> true
+        | _ -> false
+    
     let takenByTheSameUser = fun (holiday1:TimeOffHoliday) holiday2 ->
         match holiday1, holiday2 with
         | hol1, hol2 when hol1.UserId = hol2.UserId -> true
-        | _ -> false
-
-    let TheyCanBothTakeHolydayWhen = fun holiday1 holiday2 ->
-        match holiday1, holiday2 with
-        | hol1, hol2 when not (takenByTheSameUser hol1 hol2) -> true
-        | hol1, hol2 when isBetweenBoundaryOf hol1 hol2 -> false
-        | _ -> true
+        | _ -> false        
