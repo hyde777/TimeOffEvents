@@ -30,11 +30,11 @@ module HttpHandlers =
         RequestId: Guid
     }
 
-    let requestTimeOff (handleCommand: Command -> Result<RequestEvent list, string>) =
+    let requestTimeOff (handleCommand: Command -> Result<HolidayEvent list, string>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
-                let! timeOffRequest = ctx.BindJsonAsync<TimeOffRequest>()
-                let command = RequestTimeOff timeOffRequest
+                let! timeOffRequest = ctx.BindJsonAsync<TimeOffHoliday>()
+                let command = AskHolidayTimeOff timeOffRequest
                 let result = handleCommand command
                 match result with
                 | Ok _ -> return! json timeOffRequest next ctx
@@ -42,14 +42,66 @@ module HttpHandlers =
                     return! (BAD_REQUEST message) next ctx
             }
 
-    let validateRequest (handleCommand: Command -> Result<RequestEvent list, string>) =
+    let validateRequest (handleCommand: Command -> Result<HolidayEvent list, string>) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
                 let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
-                let command = ValidateRequest (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let command = ValidateHoliday (userAndRequestId.UserId, userAndRequestId.RequestId)
                 let result = handleCommand command
                 match result with
-                | Ok [RequestValidated timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok [HolidayValidated timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+    
+    let refuseRequest (handleCommand: Command -> Result<HolidayEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
+                let command = RefuseHoliday (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [HolidayRefused timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+
+    let askCancelationRequest (handleCommand: Command -> Result<HolidayEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
+                let command = AskCancelHoliday (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [HolidayCancelPending timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+
+    let cancelRequest (handleCommand: Command -> Result<HolidayEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
+                let command = CancelHoliday (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [HolidayCancel timeOffRequest] -> return! json timeOffRequest next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
+            }
+    
+    let denyCancelRequest (handleCommand: Command -> Result<HolidayEvent list, string>) =
+        fun (next: HttpFunc) (ctx: HttpContext) ->
+            task {
+                let userAndRequestId = ctx.BindQueryString<UserAndRequestId>()
+                let command = DenyCancelHoliday (userAndRequestId.UserId, userAndRequestId.RequestId)
+                let result = handleCommand command
+                match result with
+                | Ok [HolidayDenyCancel timeOffRequest] -> return! json timeOffRequest next ctx
                 | Ok _ -> return! Successful.NO_CONTENT next ctx
                 | Error message ->
                     return! (BAD_REQUEST message) next ctx
@@ -73,7 +125,7 @@ module HttpHandlers =
 // Web app
 // ---------------------------------
 
-let webApp (eventStore: IStore<UserId, RequestEvent>) =
+let webApp (eventStore: IStore<UserId, HolidayEvent>) =
     let handleCommand (user: User) (command: Command) =
         let userId = command.UserId
 
@@ -81,7 +133,7 @@ let webApp (eventStore: IStore<UserId, RequestEvent>) =
         let state = eventStream.ReadAll() |> Seq.fold Logic.evolveUserRequests Map.empty
 
         // Decide how to handle the command
-        let result = Logic.decide state user command
+        let result = Logic.decide DateTime.Today state user command
 
         // Save events in case of success
         match result with
@@ -99,9 +151,13 @@ let webApp (eventStore: IStore<UserId, RequestEvent>) =
                     (Auth.Handlers.requiresJwtTokenForAPI (fun user ->
                         choose [
                             POST >=>
-                                (choose [                        
+                                (choose [
                                     routex "/request/?" >=> HttpHandlers.requestTimeOff (handleCommand user)
                                     routex "/validate-request/?" >=> HttpHandlers.validateRequest (handleCommand user)
+                                    routex "/refuse-request/?" >=> HttpHandlers.refuseRequest (handleCommand user)
+                                    routex "/ask-cancel-request/?" >=> HttpHandlers.askCancelationRequest (handleCommand user)
+                                    routex "/cancel-request/?" >=> HttpHandlers.cancelRequest (handleCommand user)
+                                    routex "/deny-cancel-request/?" >=> HttpHandlers.denyCancelRequest (handleCommand user)
                                 ])
                             GET >=> routef "/user-balance/%s" (HttpHandlers.getUserBalance user)
                         ]
@@ -127,7 +183,7 @@ let configureCors (builder: CorsPolicyBuilder) =
            .AllowAnyHeader()
            |> ignore
 
-let configureApp (eventStore: IStore<UserId, RequestEvent>) (app: IApplicationBuilder) =
+let configureApp (eventStore: IStore<UserId, HolidayEvent>) (app: IApplicationBuilder) =
     let webApp = webApp eventStore
     let env = app.ApplicationServices.GetService<IHostingEnvironment>()
     (match env.IsDevelopment() with
@@ -152,7 +208,7 @@ let main _ =
 
     //let eventStore = InMemoryStore.Create<UserId, RequestEvent>()
     let storagePath = System.IO.Path.Combine(contentRoot, "../../../.storage", "userRequests")
-    let eventStore = FileSystemStore.Create<UserId, RequestEvent>(storagePath, id)
+    let eventStore = FileSystemStore.Create<UserId, HolidayEvent>(storagePath, id)
 
     let webRoot = Path.Combine(contentRoot, "WebRoot")
     WebHostBuilder()
