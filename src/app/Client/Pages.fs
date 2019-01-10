@@ -7,6 +7,7 @@ open Elmish.Browser.UrlParser
 type Page =
     | Home
     | Login
+    | NewHoliday
     | About
     | Employees
     | Balance of userName:string option
@@ -17,6 +18,7 @@ module Pages =
         | Page.Home -> "#home"
         | Page.About -> "#about"
         | Page.Login -> "#login"
+        | Page.NewHoliday -> "#newHoliday"
         | Page.Employees -> "#employees"
         | Page.Balance None -> "#balance"
         | Page.Balance (Some userName) -> sprintf "#balance/%s" userName
@@ -26,6 +28,7 @@ module Pages =
         oneOf [
             map Page.Home (s "home")
             map Page.Login (s "login")
+            map Page.NewHoliday (s "newHoliday")
             map Page.About (s "about")
             map Page.Employees (s "employees")
             map (Page.Balance << Some) (s "balance" </> str)

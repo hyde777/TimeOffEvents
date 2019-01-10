@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
@@ -27,6 +27,9 @@
     <Compile Include="Balance/State.fs" />
     <Compile Include="Balance/View.fs" />
     <Compile Include="Employees/View.fs" />
+    <Compile Include="Holidays\Types.fs" />
+    <Compile Include="Holidays\State.fs" />
+    <Compile Include="Holidays\View.fs" />
     <Compile Include="About/View.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="State.fs" />

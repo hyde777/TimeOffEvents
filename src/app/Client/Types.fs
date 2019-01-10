@@ -4,6 +4,7 @@ module Client.Types
 type AppMsg =
     | GlobalMsg of GlobalMsg
     | LoginMsg of Login.Types.Msg
+    | NewHolidayMsg of Holidays.Types.Msg
     | HomeMsg of Home.Types.Msg
     | BalanceMsg of Balance.Types.Msg
 
@@ -12,6 +13,7 @@ type TransientPageModel =
     | NoPageModel
     | LoginModel of Login.Types.Model
     | BalanceModel of Balance.Types.Model
+    | NewHolidayModel of Holidays.Types.Model
 
 /// The composed model for the application, which is a single page state plus login information
 type Model = {

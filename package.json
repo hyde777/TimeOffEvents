@@ -10,7 +10,8 @@
     "react-bootstrap": "0.32.4",
     "react-dom": "16.6.0",
     "remotedev": "0.2.7",
-    "whatwg-fetch": "^3.0.0"
+    "whatwg-fetch": "^3.0.0",
+    "yarn": "^1.13.0"
   },
   "devDependencies": {
     "@babel/core": "^7.0.0",

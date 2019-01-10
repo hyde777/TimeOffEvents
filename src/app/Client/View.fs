@@ -15,6 +15,10 @@ let root model dispatch =
       match model.TransientPageModel with
       | LoginModel loginModel -> [ Login.View.root loginModel (LoginMsg >> dispatch) ]
       | _ -> []
+    | Page.NewHoliday -> 
+        match model.TransientPageModel with
+        | NewHolidayModel holidayModel -> [ Holidays.View.root holidayModel (NewHolidayMsg >> dispatch) ]
+        | _ -> []
     | Page.Employees -> [ Employees.View.root dispatch ]
     | Page.Balance _ ->
       match model.TransientPageModel with
