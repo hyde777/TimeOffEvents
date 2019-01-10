@@ -34,4 +34,5 @@ let view (model: NavigationData) =
             yield menuItem "Employees" Page.Employees currentPage
           elif isLoggedIn then
             yield menuItem "Balance" (Page.Balance None) currentPage
+            yield menuItem "New TimeOff" Page.NewHoliday currentPage
           yield menuItem "About" Page.About currentPage ] ]

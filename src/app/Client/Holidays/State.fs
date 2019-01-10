@@ -11,8 +11,8 @@ open Client
 open Client.Holidays.Types
 open System
 
-let init : Model =
-  { StartDate = Date.Format.localFormat Date.Local.french "dd/MM/yyyy" DateTime.Today; StartHalfDay = AM}
+let init user =
+  { StartDate = Date.Format.localFormat Date.Local.french "dd/MM/yyyy" DateTime.Today; StartHalfDay = AM}, Cmd.none
 
 let update msg model =
   match msg with
