@@ -10,4 +10,4 @@ module ServerUrls =
     let UserBalance = "/api/timeoff/user-balance/"
 
     [<Literal>]
-    let NewHoliday = "/api/timeoff/user-balance/"
+    let NewHoliday = "/api/timeoff/request/"

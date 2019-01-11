@@ -112,7 +112,7 @@ module HttpHandlers =
             task {
                 let balance : UserVacationBalance = {
                   UserName = userName
-                  BalanceYear = 2018
+                  BalanceYear = DateTime.Today.Year
                   CarriedOver = 0.0
                   PortionAccruedToDate = 10.0
                   TakenToDate = 0.0

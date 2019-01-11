@@ -11,6 +11,7 @@ type Command =
     | DenyCancelHoliday of UserId * Guid
     | CancelHoliday of UserId * Guid
     | RefuseHoliday of UserId * Guid
+    | GetBalance of UserId
     with member this.UserId : UserId =
             match this with
             | AskHolidayTimeOff holiday -> holiday.UserId
@@ -19,6 +20,7 @@ type Command =
             | DenyCancelHoliday (userId, _) -> userId
             | CancelHoliday (userId, _) -> userId
             | RefuseHoliday (userId, _) -> userId
+            | GetBalance userId -> userId
 
 // And our events (ce qu'on écoute)
 type HolidayEvent =
@@ -28,6 +30,7 @@ type HolidayEvent =
     | HolidayCancelPending of TimeOffHoliday
     | HolidayDenyCancel of TimeOffHoliday
     | HolidayCancel of TimeOffHoliday
+    | HolidayBalance of UserVacationBalance
     with member this.Request =
             match this with
             | HolidayCreated holiday -> holiday
@@ -36,6 +39,7 @@ type HolidayEvent =
             | HolidayCancelPending holiday -> holiday
             | HolidayDenyCancel holiday -> holiday
             | HolidayCancel holiday -> holiday
+            | HolidayBalance _ -> invalidOp "It's not possible"
 
 // We then define the state of the system,
 // and our 2 main functions `decide` and `evolve`
@@ -90,6 +94,26 @@ module Logic =
         // TODO: write a function that checks if 2 holidays overlap
     let overlapsWithAnyRequest (otherRequests: TimeOffHoliday seq) holiday =
          Seq.exists (fun req -> overlapsWith req holiday) otherRequests
+    
+    
+
+    let createUserVacationBalance today (userRequest: TimeOffHoliday seq) userId = 
+        let mutable spanOfTime : float = 0.0
+
+        userRequest 
+        |> Seq.where (fun holiday -> holiday.End.Date < today)
+        |> Seq.iter (fun holiday -> spanOfTime <- spanOfTime + getSpanOfHoliday holiday) 
+
+        let mutable userVacationBalance : UserVacationBalance = {
+            UserName = userId
+            BalanceYear = 24
+            CarriedOver = 0.0
+            PortionAccruedToDate = spanOfTime
+            TakenToDate = 0.0
+            CurrentBalance = 24.0 - spanOfTime
+        }
+
+        Ok [ HolidayBalance userVacationBalance ]
 
     let createRequest today activeUserRequests holiday =
         if holiday |> overlapsWithAnyRequest activeUserRequests then
@@ -141,6 +165,14 @@ module Logic =
             Error "Unauthorized"
         | _ ->
             match command with
+            | GetBalance userId ->
+                let seqUserRequest = 
+                    userRequests 
+                    |> Map.toSeq 
+                    |> Seq.map (fun (_, state) -> state)
+                    |> Seq.map (fun state -> state.Request)
+                createUserVacationBalance today seqUserRequest userId
+
             | AskHolidayTimeOff request ->
                 let activeUserRequests =
                     userRequests

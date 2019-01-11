@@ -2,6 +2,7 @@ module TimeOff.Tests
 
 open Expecto
 open System
+open HolidayTools
 
 let Given (events: HolidayEvent list) = events
 let ConnectedAs (user: User) (events: HolidayEvent list) = events, user
@@ -265,5 +266,78 @@ let EmployeeCancelationTests =
       |> AndDateIs (2018, 12, 27)
       |> When (CancelHoliday (holiday.UserId, holiday.HolidayId))
       |> Then (Ok [HolidayCancel holiday]) "The ask of holiday cancelation is confirmed"
+    }
+  ]
+
+[<Tests>]
+let AskBalance =
+  testList "Ask an employee balance tests" [
+    test "An Employee ask his balance Holiday when he only have 1 holliday" {
+      let holiday = {
+        UserId = "joed"
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 12, 15); HalfDay = AM }
+        End = { Date = DateTime(2018, 12, 17); HalfDay = PM } }
+        
+      let mutable spanOfTime : float = float (holiday.End.Date - holiday.Start.Date).Days
+      if holiday.End.HalfDay = AM && holiday.Start.HalfDay = AM 
+      || holiday.End.HalfDay = PM && holiday.Start.HalfDay = PM then
+        spanOfTime <- (spanOfTime + 0.5)
+
+      let userVacationBalance : UserVacationBalance = {
+        UserName = holiday.UserId
+        BalanceYear = 24
+        CarriedOver = 0.0
+        PortionAccruedToDate = spanOfTime
+        TakenToDate = 0.0
+        CurrentBalance = 24.0 - spanOfTime
+      }
+
+      Given [ HolidayValidated holiday ]
+      |> ConnectedAs (Employee holiday.UserId)
+      |> AndDateIs (2018, 12, 29)
+      |> When (GetBalance holiday.UserId)
+      |> Then (Ok [ HolidayBalance userVacationBalance ]) "We got a balance is confirmed"
+    }
+
+    test "Employee ask his balance Holiday when he have multiple holliday" {
+      let holiday = {
+        UserId = "joed"
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 12, 15); HalfDay = AM }
+        End = { Date = DateTime(2018, 12, 17); HalfDay = PM } }
+       
+      let holiday2 = {
+        UserId = "joed"
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 11, 15); HalfDay = AM }
+        End = { Date = DateTime(2018, 11, 17); HalfDay = PM }
+      }
+
+      let holiday3 = {
+        UserId = "joed"
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 10, 15); HalfDay = AM }
+        End = { Date = DateTime(2018, 10, 17); HalfDay = PM }
+      }
+      
+      let mutable spanOfTime = getSpanOfHoliday holiday
+      spanOfTime <- spanOfTime + getSpanOfHoliday holiday2
+      spanOfTime <- spanOfTime + getSpanOfHoliday holiday3
+
+      let userVacationBalance : UserVacationBalance = {
+        UserName = holiday.UserId
+        BalanceYear = 24
+        CarriedOver = 0.0
+        PortionAccruedToDate = spanOfTime
+        TakenToDate = 0.0
+        CurrentBalance = 24.0 - spanOfTime
+      }
+
+      Given [ HolidayValidated holiday; HolidayValidated holiday2; HolidayValidated holiday3 ]
+      |> ConnectedAs (Employee holiday.UserId)
+      |> AndDateIs (2018, 12, 29)
+      |> When (GetBalance holiday.UserId)
+      |> Then (Ok [ HolidayBalance userVacationBalance ]) "We got a balance is confirmed"
     }
   ]

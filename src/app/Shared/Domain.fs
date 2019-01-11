@@ -36,7 +36,13 @@ type UserVacationBalance = {
 }
 
 module HolidayTools =
-    
+    let getSpanOfHoliday holiday =
+        let mutable spanOfTime = float (holiday.End.Date - holiday.Start.Date).Days
+        if holiday.End.HalfDay = AM && holiday.Start.HalfDay = AM 
+        || holiday.End.HalfDay = PM && holiday.Start.HalfDay = PM then
+            spanOfTime <- (spanOfTime + 0.5)
+        spanOfTime
+
     let supBound bound1 bound2 =
         match bound1, bound2 with
         | b1, b2 when b1.Date > b2.Date -> true
