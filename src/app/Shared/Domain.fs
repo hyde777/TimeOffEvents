@@ -30,8 +30,9 @@ type UserVacationBalance = {
   UserName : UserId
   BalanceYear: int
   CarriedOver: float
-  PortionAccruedToDate: float
   TakenToDate: float
+  PortionAccruedToDate: float
+  Planned: float
   CurrentBalance: float
 }
 

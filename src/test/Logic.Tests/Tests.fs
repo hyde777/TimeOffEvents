@@ -286,10 +286,11 @@ let AskBalance =
 
       let userVacationBalance : UserVacationBalance = {
         UserName = holiday.UserId
-        BalanceYear = 24
+        BalanceYear = 2018
         CarriedOver = 0.0
-        PortionAccruedToDate = spanOfTime
-        TakenToDate = 0.0
+        PortionAccruedToDate = 24.0
+        TakenToDate = spanOfTime
+        Planned = 0.0
         CurrentBalance = 24.0 - spanOfTime
       }
 
@@ -327,16 +328,60 @@ let AskBalance =
 
       let userVacationBalance : UserVacationBalance = {
         UserName = holiday.UserId
-        BalanceYear = 24
+        BalanceYear = 2018
         CarriedOver = 0.0
-        PortionAccruedToDate = spanOfTime
-        TakenToDate = 0.0
+        PortionAccruedToDate = 24.0
+        TakenToDate = spanOfTime
+        Planned = 0.0
         CurrentBalance = 24.0 - spanOfTime
       }
 
       Given [ HolidayValidated holiday; HolidayValidated holiday2; HolidayValidated holiday3 ]
       |> ConnectedAs (Employee holiday.UserId)
       |> AndDateIs (2018, 12, 29)
+      |> When (GetBalance holiday.UserId)
+      |> Then (Ok [ HolidayBalance userVacationBalance ]) "We got a balance is confirmed"
+    }
+
+    test "Employee ask his balance Holiday when he have multiple holliday and taken holliday" {
+      let holiday = {
+        UserId = "joed"
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2019, 1, 15); HalfDay = AM }
+        End = { Date = DateTime(2019, 1, 17); HalfDay = PM } }
+       
+      let holiday2 = {
+        UserId = "joed"
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 11, 15); HalfDay = AM }
+        End = { Date = DateTime(2018, 11, 17); HalfDay = PM }
+      }
+
+      let holiday3 = {
+        UserId = "joed"
+        HolidayId = Guid.NewGuid()
+        Start = { Date = DateTime(2018, 10, 15); HalfDay = AM }
+        End = { Date = DateTime(2018, 10, 17); HalfDay = PM }
+      }
+      
+      let mutable spanOfTime = getSpanOfHoliday holiday
+      let mutable spanOfTimeBefore = getSpanOfHoliday holiday2
+      spanOfTimeBefore <- spanOfTimeBefore + getSpanOfHoliday holiday3
+
+
+      let userVacationBalance : UserVacationBalance = {
+        UserName = holiday.UserId
+        BalanceYear = 2018
+        CarriedOver = 24.0 - spanOfTimeBefore
+        PortionAccruedToDate = 24.0
+        TakenToDate = spanOfTime
+        Planned = 0.0
+        CurrentBalance = (24.0 + (24.0 - spanOfTimeBefore)) - (0.0 + spanOfTime)
+      }
+
+      Given [ HolidayCreated holiday; HolidayValidated holiday2; HolidayValidated holiday3 ]
+      |> ConnectedAs (Employee holiday.UserId)
+      |> AndDateIs (2019, 12, 29)
       |> When (GetBalance holiday.UserId)
       |> Then (Ok [ HolidayBalance userVacationBalance ]) "We got a balance is confirmed"
     }

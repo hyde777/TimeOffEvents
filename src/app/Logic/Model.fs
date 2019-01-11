@@ -98,19 +98,35 @@ module Logic =
     
 
     let createUserVacationBalance today (userRequest: TimeOffHoliday seq) userId = 
-        let mutable spanOfTime : float = 0.0
+            
+        let spanOfTime : float = 
+            userRequest 
+            |> Seq.where (fun holiday -> holiday.End.Date < today && holiday.Start.Date.Year = today.Year) 
+            |> Seq.map (fun h -> getSpanOfHoliday h) 
+            |> Seq.reduce (fun span1 span2 -> span1 + span2)
 
-        userRequest 
-        |> Seq.where (fun holiday -> holiday.End.Date < today)
-        |> Seq.iter (fun holiday -> spanOfTime <- spanOfTime + getSpanOfHoliday holiday) 
+        let existLastYearHoliday = 
+            userRequest |> Seq.exists (fun holiday -> holiday.Start.Date.Year = today.Year - 1)
 
-        let mutable userVacationBalance : UserVacationBalance = {
+        let usedDaysFromLastYear = 
+            if existLastYearHoliday then
+                userRequest
+                |> Seq.where (fun holiday -> holiday.Start.Date.Year = today.Year - 1)
+                |> Seq.map (fun h -> getSpanOfHoliday h) 
+                |> Seq.reduce (fun span1 span2 -> span1 + span2)
+            else
+                0.0
+
+        let remainingDaysFromLastYear = 24.0 - usedDaysFromLastYear
+            
+        let userVacationBalance : UserVacationBalance = {
             UserName = userId
-            BalanceYear = 24
-            CarriedOver = 0.0
-            PortionAccruedToDate = spanOfTime
-            TakenToDate = 0.0
-            CurrentBalance = 24.0 - spanOfTime
+            BalanceYear = 2018
+            CarriedOver = remainingDaysFromLastYear
+            PortionAccruedToDate = 24.0
+            TakenToDate = spanOfTime
+            Planned = 0.0
+            CurrentBalance = (24.0 + remainingDaysFromLastYear) - spanOfTime
         }
 
         Ok [ HolidayBalance userVacationBalance ]

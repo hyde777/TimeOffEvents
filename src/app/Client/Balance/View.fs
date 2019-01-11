@@ -45,6 +45,12 @@ let root model dispatch =
                       ]
                     tr [ ]
                       [
+                        th [ ClassName "has-text-right" ] [ str "Planned" ]
+                        td [] [ str "-" ]
+                        td [ ] [ str (sprintf "%.2f" balance.Planned) ]
+                      ]
+                    tr [ ]
+                      [
                         th [ ClassName "has-text-right" ] [ str "Current balance" ]
                         td [] [ str "=" ]
                         td [ ] [ str (sprintf "%.2f" balance.CurrentBalance) ]
