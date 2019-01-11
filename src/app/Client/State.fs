@@ -83,8 +83,8 @@ let update msg model =
   | BalanceMsg _, _ -> model, Cmd.none
 
   | NewHolidayMsg msg, NewHolidayModel newHolidayModel ->
-    let (balanceModel, balanceCmd) = Holidays.State.update msg newHolidayModel
-    { model with TransientPageModel = NewHolidayModel balanceModel }, Cmd.map NewHolidayMsg balanceCmd
+    let (newHolidayModel, newHolidayCmd) = Holidays.State.update msg newHolidayModel
+    { model with TransientPageModel = NewHolidayModel newHolidayModel }, Cmd.map NewHolidayMsg newHolidayCmd
   | NewHolidayMsg _, _ -> model, Cmd.none
 
   | HomeMsg msg, _ ->

@@ -8,3 +8,6 @@ module ServerUrls =
 
     [<Literal>]
     let UserBalance = "/api/timeoff/user-balance/"
+
+    [<Literal>]
+    let NewHoliday = "/api/timeoff/user-balance/"

@@ -18,11 +18,48 @@ let root (model:Model) dispatch =
             [ str "Start Date" ]
           Control.div [ Control.HasIconLeft ]
             [ Input.input [ Input.Type Input.Text
-                            Input.Id "Start"
+                            Input.Id "StartDate"
                             Input.Placeholder "dd/MM/yyyy"
                             Input.DefaultValue model.StartDate
                             Input.Props [
                               OnChange (fun ev -> dispatch (SetStartDate !!ev.target?value))
+                              AutoFocus true ] ]
+              Icon.faIcon [ Icon.Size IsSmall; Icon.IsLeft ] [ Fa.icon Fa.I.User ] ] ]
+
+      Field.div [ ]
+        [ Label.label [ ]
+            [ str "Start HalfDay" ]
+          Control.div [ Control.HasIconLeft ]
+            [ Input.input [ Input.Type Input.Text
+                            Input.Id "StartHalfday"
+                            Input.Placeholder "AM or PM"
+                            Input.Props [
+                              OnChange (fun ev -> dispatch (SetStartHalfDay !!ev.target?value))
+                              AutoFocus true ] ]
+              Icon.faIcon [ Icon.Size IsSmall; Icon.IsLeft ] [ Fa.icon Fa.I.User ] ] ]
+
+      Field.div [ ]
+        [ Label.label [ ]
+            [ str "End Date" ]
+          Control.div [ Control.HasIconLeft ]
+            [ Input.input [ Input.Type Input.Text
+                            Input.Id "EndDate"
+                            Input.Placeholder "dd/MM/yyyy"
+                            Input.DefaultValue model.EndDate
+                            Input.Props [
+                              OnChange (fun ev -> dispatch (SetEndDate !!ev.target?value))
+                              AutoFocus true ] ]
+              Icon.faIcon [ Icon.Size IsSmall; Icon.IsLeft ] [ Fa.icon Fa.I.User ] ] ]
+
+      Field.div [ ]
+        [ Label.label [ ]
+            [ str "End Halfday" ]
+          Control.div [ Control.HasIconLeft ]
+            [ Input.input [ Input.Type Input.Text
+                            Input.Id "EndHalfday"
+                            Input.Placeholder "AM or PM"
+                            Input.Props [
+                              OnChange (fun ev -> dispatch (SetEndHalfDay !!ev.target?value))
                               AutoFocus true ] ]
               Icon.faIcon [ Icon.Size IsSmall; Icon.IsLeft ] [ Fa.icon Fa.I.User ] ] ]
 
