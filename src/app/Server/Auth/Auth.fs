@@ -15,16 +15,17 @@ type Identity =
 
 /// Login handlers and functions for API handlers request authorisation with JWT.
 module Handlers =
+    open System
 
     let private tryGetValidIdentityFromLogin (login: TimeOff.AuthTypes.Login) : Identity option =
         if login.Password = login.UserName then
             match login.UserName with
             | "manager"   -> Some { UserName = login.UserName; User = Manager }
-            | "employee1" -> Some { UserName = login.UserName; User = Employee login.UserName }
-            | "employee2" -> Some { UserName = login.UserName; User = Employee login.UserName }
-            | "employee3" -> Some { UserName = login.UserName; User = Employee login.UserName }
-            | "employee4" -> Some { UserName = login.UserName; User = Employee login.UserName }
-            | "employee5" -> Some { UserName = login.UserName; User = Employee login.UserName }
+            | "employee1" -> Some { UserName = login.UserName; User = Employee (login.UserName, DateTime.Today)  }
+            | "employee2" -> Some { UserName = login.UserName; User = Employee (login.UserName, DateTime.Today) }
+            | "employee3" -> Some { UserName = login.UserName; User = Employee (login.UserName, DateTime.Today) }
+            | "employee4" -> Some { UserName = login.UserName; User = Employee (login.UserName, DateTime.Today) }
+            | "employee5" -> Some { UserName = login.UserName; User = Employee (login.UserName, DateTime.Today)}
             | _ -> None
         else
             None

@@ -97,7 +97,7 @@ module Logic =
     
     
 
-    let createUserVacationBalance today (userRequest: TimeOffHoliday seq) userId = 
+    let createUserVacationBalance today (userRequest: TimeOffHoliday seq) (user: User) = 
             
         let spanOfTime : float = 
             userRequest 
@@ -117,10 +117,12 @@ module Logic =
             else
                 0.0
 
-        let remainingDaysFromLastYear = 24.0 - usedDaysFromLastYear
+        let remainingDaysFromLastYear = 
+            if user.EmploymentDate.Year < today.Year then 24.0 - usedDaysFromLastYear
+            else 0.0
             
         let userVacationBalance : UserVacationBalance = {
-            UserName = userId
+            UserName = user.UserId
             BalanceYear = 2018
             CarriedOver = remainingDaysFromLastYear
             PortionAccruedToDate = 24.0
@@ -177,17 +179,17 @@ module Logic =
     let decide  (today: DateTime) (userRequests: UserHolidaysState) (user: User) (command: Command) =
         let relatedUserId = command.UserId
         match user with
-        | Employee userId when userId <> relatedUserId ->
+        | Employee (userId,_) when userId <> relatedUserId ->
             Error "Unauthorized"
         | _ ->
             match command with
-            | GetBalance userId ->
+            | GetBalance _ ->
                 let seqUserRequest = 
                     userRequests 
                     |> Map.toSeq 
                     |> Seq.map (fun (_, state) -> state)
                     |> Seq.map (fun state -> state.Request)
-                createUserVacationBalance today seqUserRequest userId
+                createUserVacationBalance today seqUserRequest user
 
             | AskHolidayTimeOff request ->
                 let activeUserRequests =

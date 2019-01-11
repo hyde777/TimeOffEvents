@@ -83,23 +83,23 @@ let creationTests =
         End = { Date = DateTime(2018, 12, 28); HalfDay = PM } }
 
       Given [ ]
-      |> ConnectedAs (Employee "joed")
+      |> ConnectedAs (Employee (holiday.UserId, DateTime(2018, 12, 2)))
       |> AndDateIs (2018, 12, 3)
       |> When (AskHolidayTimeOff holiday)
       |> Then (Ok [HolidayCreated holiday]) "The request should have been created"
     }
 
     test "A request in the past cannot be created" {
-      let request = {
+      let holiday = {
         UserId = "joed"
         HolidayId = Guid.NewGuid()
         Start = { Date = DateTime(2018, 11, 28); HalfDay = AM }
         End = { Date = DateTime(2018, 11, 28); HalfDay = PM } }
 
       Given [ ]
-      |> ConnectedAs (Employee "joed")
+      |> ConnectedAs (Employee (holiday.UserId, DateTime(2018, 12, 2)))
       |> AndDateIs (2018, 12, 3)
-      |> When (AskHolidayTimeOff request)
+      |> When (AskHolidayTimeOff holiday)
       |> Then (Error "The holiday starts in the past") "The request should not have been created"
     }
   ]
@@ -151,24 +151,24 @@ let askCancelationTests =
         End = { Date = DateTime(2018, 12, 30); HalfDay = PM } }
         
       Given [ HolidayValidated request ]
-      |> ConnectedAs (Employee "joed")
+      |> ConnectedAs (Employee ("joed", DateTime(2018, 12, 2)))
       |> AndDateIs (2018, 12, 27)
       |> When (AskCancelHoliday (request.UserId, request.HolidayId))
       |> Then (Ok [HolidayCancelPending request]) "The request should have been canceled"
     }
 
     test "A User ask a cancelation of his ask of holiday" {
-      let request = {
+      let holiday = {
         UserId = "joed"
         HolidayId = Guid.NewGuid()
         Start = { Date = DateTime(2018, 12, 28); HalfDay = AM }
         End = { Date = DateTime(2018, 12, 30); HalfDay = PM } }
         
-      Given [ HolidayCreated request ]
-      |> ConnectedAs (Employee "joed")
+      Given [ HolidayCreated holiday ]
+      |> ConnectedAs (Employee (holiday.UserId, DateTime(2018, 12, 2)))
       |> AndDateIs (2018, 12, 27)
-      |> When (AskCancelHoliday (request.UserId, request.HolidayId))
-      |> Then (Ok [HolidayCancelPending request]) "The request should have been canceled"
+      |> When (AskCancelHoliday (holiday.UserId, holiday.HolidayId))
+      |> Then (Ok [HolidayCancelPending holiday]) "The request should have been canceled"
     }
   ]
 
@@ -248,7 +248,7 @@ let EmployeeCancelationTests =
         End = { Date = DateTime(2018, 12, 30); HalfDay = PM } }
         
       Given [ HolidayValidated holiday ]
-      |> ConnectedAs (Employee holiday.UserId)
+      |> ConnectedAs (Employee (holiday.UserId, DateTime(2018, 12, 2)))
       |> AndDateIs (2018, 12, 27)
       |> When (CancelHoliday (holiday.UserId, holiday.HolidayId))
       |> Then (Ok [HolidayCancel holiday]) "The ask of holiday cancelation is confirmed"
@@ -262,7 +262,7 @@ let EmployeeCancelationTests =
         End = { Date = DateTime(2018, 12, 30); HalfDay = PM } }
         
       Given [ HolidayCreated holiday ]
-      |> ConnectedAs (Employee holiday.UserId)
+      |> ConnectedAs (Employee (holiday.UserId, DateTime(2018, 12, 2)))
       |> AndDateIs (2018, 12, 27)
       |> When (CancelHoliday (holiday.UserId, holiday.HolidayId))
       |> Then (Ok [HolidayCancel holiday]) "The ask of holiday cancelation is confirmed"
@@ -295,7 +295,7 @@ let AskBalance =
       }
 
       Given [ HolidayValidated holiday ]
-      |> ConnectedAs (Employee holiday.UserId)
+      |> ConnectedAs (Employee (holiday.UserId, DateTime(2018, 12, 2)))
       |> AndDateIs (2018, 12, 29)
       |> When (GetBalance holiday.UserId)
       |> Then (Ok [ HolidayBalance userVacationBalance ]) "We got a balance is confirmed"
@@ -337,7 +337,7 @@ let AskBalance =
       }
 
       Given [ HolidayValidated holiday; HolidayValidated holiday2; HolidayValidated holiday3 ]
-      |> ConnectedAs (Employee holiday.UserId)
+      |> ConnectedAs (Employee (holiday.UserId, DateTime(2018, 12, 2)))
       |> AndDateIs (2018, 12, 29)
       |> When (GetBalance holiday.UserId)
       |> Then (Ok [ HolidayBalance userVacationBalance ]) "We got a balance is confirmed"
@@ -380,7 +380,7 @@ let AskBalance =
       }
 
       Given [ HolidayCreated holiday; HolidayValidated holiday2; HolidayValidated holiday3 ]
-      |> ConnectedAs (Employee holiday.UserId)
+      |> ConnectedAs (Employee (holiday.UserId, DateTime(2017, 12, 1)))
       |> AndDateIs (2019, 12, 29)
       |> When (GetBalance holiday.UserId)
       |> Then (Ok [ HolidayBalance userVacationBalance ]) "We got a balance is confirmed"

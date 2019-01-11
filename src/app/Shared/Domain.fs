@@ -6,8 +6,16 @@ open System
 type UserId = string
 
 type User =
-    | Employee of UserId
+    | Employee of UserId*DateTime
     | Manager
+    with 
+        member this.UserId : UserId =
+            match this with
+            | Employee (userId,_) -> userId
+        member this.EmploymentDate : DateTime = 
+            match this with 
+            | Employee (_, date) -> date
+        
 
 type HalfDay = | AM | PM
 
