@@ -116,6 +116,7 @@ module HttpHandlers =
                   CarriedOver = 0.0
                   PortionAccruedToDate = 10.0
                   TakenToDate = 0.0
+                  Planned = 0.0
                   CurrentBalance = 10.
                 }
                 return! json balance next ctx
