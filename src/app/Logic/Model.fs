@@ -99,11 +99,27 @@ module Logic =
 
     let createUserVacationBalance today (userRequest: TimeOffHoliday seq) (user: User) = 
             
-        let spanOfTime : float = 
-            userRequest 
-            |> Seq.where (fun holiday -> holiday.End.Date < today && holiday.Start.Date.Year = today.Year) 
-            |> Seq.map (fun h -> getSpanOfHoliday h) 
-            |> Seq.reduce (fun span1 span2 -> span1 + span2)
+        let daysAlreadyTaken : float = 
+            if userRequest 
+                |> Seq.exists (fun holiday -> holiday.End.Date < today && holiday.Start.Date.Year = today.Year)
+                then
+                    userRequest 
+                    |> Seq.where (fun holiday -> holiday.End.Date < today && holiday.Start.Date.Year = today.Year) 
+                    |> Seq.map (fun h -> getSpanOfHoliday h) 
+                    |> Seq.reduce (fun span1 span2 -> span1 + span2)
+                else
+                    0.0
+        
+        let daysPlanned : float = 
+            if userRequest 
+                |> Seq.exists (fun holiday -> holiday.Start.Date > today && holiday.Start.Date.Year = today.Year)
+                then
+                    userRequest 
+                    |> Seq.where (fun holiday -> holiday.Start.Date > today && holiday.Start.Date.Year = today.Year) 
+                    |> Seq.map (fun h -> getSpanOfHoliday h) 
+                    |> Seq.reduce (fun span1 span2 -> span1 + span2)
+                else
+                    0.0
 
         let existLastYearHoliday = 
             userRequest |> Seq.exists (fun holiday -> holiday.Start.Date.Year = today.Year - 1)
@@ -123,12 +139,12 @@ module Logic =
             
         let userVacationBalance : UserVacationBalance = {
             UserName = user.UserId
-            BalanceYear = 2018
+            BalanceYear = today.Year
             CarriedOver = remainingDaysFromLastYear
             PortionAccruedToDate = 24.0
-            TakenToDate = spanOfTime
-            Planned = 0.0
-            CurrentBalance = (24.0 + remainingDaysFromLastYear) - spanOfTime
+            TakenToDate = daysAlreadyTaken
+            Planned = daysPlanned
+            CurrentBalance = (24.0 + remainingDaysFromLastYear) - (daysAlreadyTaken + daysPlanned)
         }
 
         Ok [ HolidayBalance userVacationBalance ]

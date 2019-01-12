@@ -107,19 +107,17 @@ module HttpHandlers =
                     return! (BAD_REQUEST message) next ctx
             }
 
-    let getUserBalance (authentifiedUser: User) (userName: string) =
+    let getUserBalance (handleCommand: Command -> Result<HolidayEvent list, string>) (userName: string) =
         fun (next: HttpFunc) (ctx: HttpContext) ->
             task {
-                let balance : UserVacationBalance = {
-                  UserName = userName
-                  BalanceYear = DateTime.Today.Year
-                  CarriedOver = 0.0
-                  PortionAccruedToDate = 10.0
-                  TakenToDate = 0.0
-                  Planned = 0.0
-                  CurrentBalance = 10.
-                }
-                return! json balance next ctx
+                //let userId = ctx.BindQueryString<string>()
+                let command = GetBalance userName
+                let result = handleCommand command
+                match result with
+                | Ok [HolidayBalance balance] -> return! json balance next ctx
+                | Ok _ -> return! Successful.NO_CONTENT next ctx
+                | Error message ->
+                    return! (BAD_REQUEST message) next ctx
             }
 
 // ---------------------------------
@@ -160,7 +158,7 @@ let webApp (eventStore: IStore<UserId, HolidayEvent>) =
                                     routex "/cancel-request/?" >=> HttpHandlers.cancelRequest (handleCommand user)
                                     routex "/deny-cancel-request/?" >=> HttpHandlers.denyCancelRequest (handleCommand user)
                                 ])
-                            GET >=> routef "/user-balance/%s" (HttpHandlers.getUserBalance user)
+                            GET >=> routef "/user-balance/%s" (HttpHandlers.getUserBalance (handleCommand user))
                         ]
                     ))
             ])
